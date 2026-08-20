@@ -72,11 +72,17 @@ elif [ ! -f resend-bridge/.env ]; then
   cp resend-bridge/.env.example resend-bridge/.env
 fi
 
-# Stop the legacy stack in /opt/twenty if present (same host ports/containers)
+# Stop any legacy standalone stacks (they share container names and host ports)
 if [ -d /opt/twenty ] && [ -f /opt/twenty/docker-compose.yml ]; then
   echo "Stopping legacy stack at /opt/twenty"
   (cd /opt/twenty && docker compose down 2>/dev/null || true)
 fi
+if [ -d /home/stephen/resend-bridge ] && [ -f /home/stephen/resend-bridge/docker-compose.yml ]; then
+  echo "Stopping legacy resend-bridge stack"
+  (cd /home/stephen/resend-bridge && docker compose down 2>/dev/null || true)
+fi
+# Force-remove any leftover container with the name resend-bridge
+docker rm -f resend-bridge 2>/dev/null || true
 
 docker compose up -d --build --force-recreate 2>&1 | tail -10
 
