@@ -24,7 +24,7 @@ jobs:
           echo "Deploying: ${{ github.sha }}"
           git log -1 --oneline
 
-      - name: Deploy to this server
+      - name: Deploy to server
         run: |
           chmod +x deploy.sh
           ./deploy.sh
