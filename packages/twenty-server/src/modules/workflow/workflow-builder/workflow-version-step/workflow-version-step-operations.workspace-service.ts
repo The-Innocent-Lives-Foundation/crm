@@ -311,6 +311,27 @@ export class WorkflowVersionStepOperationsWorkspaceService {
           },
         };
       }
+      case WorkflowActionType.SEND_EMAIL_TEMPLATE: {
+        return {
+          builtStep: {
+            ...baseStep,
+            name: 'Send Email Template',
+            type: WorkflowActionType.SEND_EMAIL_TEMPLATE,
+            settings: {
+              ...BASE_STEP_DEFINITION,
+              input: {
+                templateId: '',
+                recipients: {
+                  to: '',
+                  cc: '',
+                  bcc: '',
+                },
+                subject: '',
+              },
+            },
+          },
+        };
+      }
       case WorkflowActionType.CREATE_CALENDAR_EVENT: {
         return {
           builtStep: {

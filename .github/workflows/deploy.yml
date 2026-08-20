@@ -1,0 +1,33 @@
+name: Deploy CRM
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: crm-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: self-hosted
+    timeout-minutes: 90
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Show commit
+        run: |
+          echo "Deploying: ${{ github.sha }}"
+          git log -1 --oneline
+
+      - name: Deploy to this server
+        run: |
+          chmod +x deploy.sh
+          ./deploy.sh
+
+      - name: Report
+        run: echo "Deploy finished for ${{ github.sha }}"

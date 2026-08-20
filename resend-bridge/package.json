@@ -1,0 +1,21 @@
+{
+  "name": "resend-bridge",
+  "version": "1.0.0",
+  "description": "Lightweight bridge between Twenty CRM workflows and Resend email API — handles sending, tracking webhooks, and unsubscribe sync.",
+  "main": "src/index.js",
+  "type": "module",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "node --watch src/index.js"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "juice": "^11.0.0",
+    "resend": "^4.3.0",
+    "svix": "^1.45.0"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

@@ -96,6 +96,9 @@ export class WorkflowSchemaWorkspaceService {
       case WorkflowActionType.SEND_EMAIL: {
         return this.computeSendEmailActionOutputSchema();
       }
+      case WorkflowActionType.SEND_EMAIL_TEMPLATE: {
+        return this.computeSendEmailActionOutputSchema();
+      }
       case WorkflowActionType.CREATE_RECORD:
       case WorkflowActionType.UPDATE_RECORD:
       case WorkflowActionType.DELETE_RECORD:

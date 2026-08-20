@@ -111,6 +111,12 @@ const StandalonePageLayoutPage = lazy(() =>
   })),
 );
 
+const EmailBuilderPage = lazy(() =>
+  import('~/pages/email-builder/EmailBuilderPage').then((module) => ({
+    default: module.EmailBuilderPage,
+  })),
+);
+
 const NotFound = lazy(() =>
   import('~/pages/not-found/NotFound').then((module) => ({
     default: module.NotFound,
@@ -163,6 +169,14 @@ const createWorkspaceAppRouter = (
                 element={
                   <LazyRoute>
                     <StandalonePageLayoutPage />
+                  </LazyRoute>
+                }
+              />
+              <Route
+                path="/email-builder"
+                element={
+                  <LazyRoute>
+                    <EmailBuilderPage />
                   </LazyRoute>
                 }
               />

@@ -247,6 +247,41 @@ export const computeStepOutputSchema = ({
       };
     }
 
+    case 'SEND_EMAIL_TEMPLATE': {
+      return {
+        success: {
+          isLeaf: true,
+          type: FieldMetadataType.BOOLEAN,
+          label: 'Success',
+          value: true,
+        },
+        templateId: {
+          isLeaf: true,
+          type: FieldMetadataType.TEXT,
+          label: 'Template ID',
+          value: '',
+        },
+        templateName: {
+          isLeaf: true,
+          type: FieldMetadataType.TEXT,
+          label: 'Template name',
+          value: '',
+        },
+        messageId: {
+          isLeaf: true,
+          type: FieldMetadataType.TEXT,
+          label: 'Message ID',
+          value: '',
+        },
+        recipients: {
+          isLeaf: true,
+          type: FieldMetadataType.TEXT,
+          label: 'Recipients',
+          value: '',
+        },
+      };
+    }
+
     case 'DRAFT_EMAIL': {
       return {
         success: {

@@ -19,6 +19,7 @@ import { IteratorWorkflowAction } from 'src/modules/workflow/workflow-executor/w
 import { LogicFunctionWorkflowAction } from 'src/modules/workflow/workflow-executor/workflow-actions/logic-function/logic-function.workflow-action';
 import { DraftEmailWorkflowAction } from 'src/modules/workflow/workflow-executor/workflow-actions/mail-sender/draft-email.workflow-action';
 import { SendEmailWorkflowAction } from 'src/modules/workflow/workflow-executor/workflow-actions/mail-sender/send-email.workflow-action';
+import { SendEmailTemplateWorkflowAction } from 'src/modules/workflow/workflow-executor/workflow-actions/send-email-template/send-email-template.workflow-action';
 import { CreateRecordWorkflowAction } from 'src/modules/workflow/workflow-executor/workflow-actions/record-crud/create-record.workflow-action';
 import { DeleteRecordWorkflowAction } from 'src/modules/workflow/workflow-executor/workflow-actions/record-crud/delete-record.workflow-action';
 import { FindRecordsWorkflowAction } from 'src/modules/workflow/workflow-executor/workflow-actions/record-crud/find-records.workflow-action';
@@ -44,6 +45,7 @@ export class WorkflowActionFactory {
     private readonly iteratorWorkflowAction: IteratorWorkflowAction,
     private readonly httpRequestWorkflowAction: HttpRequestWorkflowAction,
     private readonly sendEmailWorkflowAction: SendEmailWorkflowAction,
+    private readonly sendEmailTemplateWorkflowAction: SendEmailTemplateWorkflowAction,
     private readonly draftEmailWorkflowAction: DraftEmailWorkflowAction,
     private readonly createCalendarEventWorkflowAction: CreateCalendarEventWorkflowAction,
     private readonly aiAgentWorkflowAction: AiAgentWorkflowAction,
@@ -59,6 +61,8 @@ export class WorkflowActionFactory {
         return this.logicFunctionWorkflowAction;
       case WorkflowActionType.SEND_EMAIL:
         return this.sendEmailWorkflowAction;
+      case WorkflowActionType.SEND_EMAIL_TEMPLATE:
+        return this.sendEmailTemplateWorkflowAction;
       case WorkflowActionType.DRAFT_EMAIL:
         return this.draftEmailWorkflowAction;
       case WorkflowActionType.CREATE_CALENDAR_EVENT:

@@ -27077,6 +27077,34 @@ __metadata:
   languageName: node
   linkType: hard
 
+"backbone-undo@npm:^0.2.5":
+  version: 0.2.6
+  resolution: "backbone-undo@npm:0.2.6"
+  dependencies:
+    backbone: "npm:>=1.0.0"
+    underscore: "npm:>=1.4.4"
+  checksum: 10c0/4a53fddd55399c50f456948e4b3fff1acefcba523166b24940588d3d92b90be3f784880c2794aa07a3a86b5cb7c2ec7d63e598153ce106a317e96ca36a4550ea
+  languageName: node
+  linkType: hard
+
+"backbone@npm:1.3.3":
+  version: 1.3.3
+  resolution: "backbone@npm:1.3.3"
+  dependencies:
+    underscore: "npm:>=1.8.3"
+  checksum: 10c0/49e1255a232b6b4b8f36045f6e4560e8b8242c925e8ba16f99dbd8fa8d11b6baf39c4d5f0637eb4d7c2bec66aeafc63a17e16ab43abc99dc9b3c142968c3101f
+  languageName: node
+  linkType: hard
+
+"backbone@npm:>=1.0.0":
+  version: 1.6.1
+  resolution: "backbone@npm:1.6.1"
+  dependencies:
+    underscore: "npm:>=1.8.3"
+  checksum: 10c0/de59ea1f81c72f18cebecf9bd9ecfc30ea5dcd7633e18aea820c5236cbdd1d807777a0d4f76d63d38c3c47647eddcbe1f739d797c3043de473c2469aa13f304a
+  languageName: node
+  linkType: hard
+
 "backo2@npm:^1.0.2":
   version: 1.0.2
   resolution: "backo2@npm:1.0.2"
@@ -28786,6 +28814,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"codemirror-formatting@npm:^1.0.0":
+  version: 1.0.0
+  resolution: "codemirror-formatting@npm:1.0.0"
+  checksum: 10c0/c390c960d736f8d647776b999e51a5b51c6f2958da9e893f079d0a35ef1e82ad50de27b614ab071765bec5fbc0496477b19e5e6b5e66659da09cf090820c6350
+  languageName: node
+  linkType: hard
+
 "codemirror-spell-checker@npm:1.1.2":
   version: 1.1.2
   resolution: "codemirror-spell-checker@npm:1.1.2"
@@ -28795,7 +28830,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"codemirror@npm:^5.65.15":
+"codemirror@npm:^5.63.0, codemirror@npm:^5.65.15":
   version: 5.65.21
   resolution: "codemirror@npm:5.65.21"
   checksum: 10c0/0884fc54ad32cbfa7605b23c8e9c0085d71856178f88448e6912335dddce321edab1326202b3778647658e7debdff07329f30e30b32f8fb4ba501582f798495a
@@ -34795,6 +34830,27 @@ __metadata:
   version: 4.2.11
   resolution: "graceful-fs@npm:4.2.11"
   checksum: 10c0/386d011a553e02bc594ac2ca0bd6d9e4c22d7fa8cfbfc448a6d148c59ea881b092db9dbe3547ae4b88e55f1b01f7c4a2ecc53b310c042793e63aa44cf6c257f2
+  languageName: node
+  linkType: hard
+
+"grapesjs-preset-newsletter@npm:1.0.2":
+  version: 1.0.2
+  resolution: "grapesjs-preset-newsletter@npm:1.0.2"
+  checksum: 10c0/589128af4f641d752dc5e637ccd938f0d2f841a5a5b90208ee36c1126db473d37d6da7b2549ea16ca034d1f07759649bebb2c4e98b5935c8201d444a49dfdac5
+  languageName: node
+  linkType: hard
+
+"grapesjs@npm:0.19.5":
+  version: 0.19.5
+  resolution: "grapesjs@npm:0.19.5"
+  dependencies:
+    backbone: "npm:1.3.3"
+    backbone-undo: "npm:^0.2.5"
+    codemirror: "npm:^5.63.0"
+    codemirror-formatting: "npm:^1.0.0"
+    promise-polyfill: "npm:^8.1.3"
+    underscore: "npm:^1.13.1"
+  checksum: 10c0/d9522347803489be289e9d14f2376694f6d301cb4ab2218a506e7983379b711f9fa6e487ccb2e40605cfc33c05ce75f67da8e5686ab196464ea49ee140b110b6
   languageName: node
   linkType: hard
 
@@ -52955,6 +53011,8 @@ __metadata:
     file-saver: "npm:^2.0.5"
     framer-motion: "npm:^11.18.0"
     fuse.js: "npm:^7.1.0"
+    grapesjs: "npm:0.19.5"
+    grapesjs-preset-newsletter: "npm:1.0.2"
     graphiql: "npm:^5.2.3"
     graphql: "npm:16.8.1"
     graphql-sse: "npm:^2.5.4"
@@ -53991,6 +54049,13 @@ __metadata:
   version: 0.1.2
   resolution: "unc-path-regex@npm:0.1.2"
   checksum: 10c0/bf9c781c4e2f38e6613ea17a51072e4b416840fbe6eeb244597ce9b028fac2fb6cfd3dde1f14111b02c245e665dc461aab8168ecc30b14364d02caa37f812996
+  languageName: node
+  linkType: hard
+
+"underscore@npm:>=1.4.4, underscore@npm:>=1.8.3, underscore@npm:^1.13.1":
+  version: 1.13.8
+  resolution: "underscore@npm:1.13.8"
+  checksum: 10c0/6677688daeda30484823e77c0b89ce4dcf29964a77d5a06f37299c007ab4bb1c66a0ff75e0d274620b62a1fe2a6ba29879f8214533ca611d71a1ae504f2bfc9b
   languageName: node
   linkType: hard
 

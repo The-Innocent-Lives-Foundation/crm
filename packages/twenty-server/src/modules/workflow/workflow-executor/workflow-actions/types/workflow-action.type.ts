@@ -11,6 +11,7 @@ import { type WorkflowIfElseActionSettings } from 'src/modules/workflow/workflow
 import { type WorkflowIteratorActionSettings } from 'src/modules/workflow/workflow-executor/workflow-actions/iterator/types/workflow-iterator-action-settings.type';
 import { type WorkflowLogicFunctionActionSettings } from 'src/modules/workflow/workflow-executor/workflow-actions/logic-function/types/workflow-logic-function-action-settings.type';
 import { type WorkflowSendEmailActionSettings } from 'src/modules/workflow/workflow-executor/workflow-actions/mail-sender/types/workflow-send-email-action-settings.type';
+import { type WorkflowSendEmailTemplateActionSettings } from 'src/modules/workflow/workflow-executor/workflow-actions/send-email-template/types/workflow-send-email-template-action-settings.type';
 import {
   type WorkflowCreateRecordActionSettings,
   type WorkflowDeleteRecordActionSettings,
@@ -47,6 +48,11 @@ export type WorkflowLogicFunctionAction = BaseWorkflowAction & {
 export type WorkflowSendEmailAction = BaseWorkflowAction & {
   type: WorkflowActionType.SEND_EMAIL;
   settings: WorkflowSendEmailActionSettings;
+};
+
+export type WorkflowSendEmailTemplateAction = BaseWorkflowAction & {
+  type: WorkflowActionType.SEND_EMAIL_TEMPLATE;
+  settings: WorkflowSendEmailTemplateActionSettings;
 };
 
 export type WorkflowDraftEmailAction = BaseWorkflowAction & {
@@ -132,6 +138,7 @@ export type WorkflowAction =
   | WorkflowCodeAction
   | WorkflowLogicFunctionAction
   | WorkflowSendEmailAction
+  | WorkflowSendEmailTemplateAction
   | WorkflowDraftEmailAction
   | WorkflowCreateCalendarEventAction
   | WorkflowCreateRecordAction

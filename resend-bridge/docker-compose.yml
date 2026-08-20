@@ -1,0 +1,24 @@
+services:
+  resend-bridge:
+    build: .
+    container_name: resend-bridge
+    restart: always
+    ports:
+      - "127.0.0.1:3100:3100"
+    env_file: .env
+    volumes:
+      - template-data:/app/data
+    cpus: 0.25
+    mem_limit: 256m
+    networks:
+      - twenty_default
+      - default
+
+networks:
+  # Attach to Twenty's existing network so the bridge can reach
+  # the Twenty server at http://server:3000/graphql
+  twenty_default:
+    external: true
+
+volumes:
+  template-data:

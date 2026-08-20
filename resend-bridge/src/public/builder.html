@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Email Template Builder</title>
+<link rel="stylesheet" href="https://unpkg.com/grapesjs@0.19.5/dist/css/grapes.min.css">
+<style>
+  :root { --accent:#6366f1; }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; background:#f9fafb; }
+  #toolbar { background:#fff; border-bottom:1px solid #e5e7eb; padding:8px 14px; display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+  #toolbar select { padding:5px 10px; border:1px solid #d1d5db; border-radius:7px; font-size:13px; }
+  #toolbar input[type=text], #toolbar input[type=password] { padding:5px 10px; border:1px solid #d1d5db; border-radius:7px; font-size:13px; }
+  #toolbar button { padding:6px 14px; border:none; border-radius:7px; font-size:13px; font-weight:600; cursor:pointer; color:#fff; background:var(--accent); }
+  #toolbar button.ghost { background:#e5e7eb; color:#111827; }
+  #toolbar button.danger { background:#ef4444; }
+  #toolbar button:hover { filter:brightness(1.08); }
+  #toolbar .spacer { flex:1; }
+  #toolbar .sep { width:1px; height:22px; background:#e5e7eb; }
+  #status { font-size:12px; color:#059669; font-weight:600; }
+  #gjs { height:calc(100vh - 44px); }
+  .standalone-only { display:none; }
+  @media (min-width:1px) {
+    :root.standalone .standalone-only { display:inline-flex; }
+  }
+</style>
+</head>
+<body>
+<div id="toolbar">
+  <select id="templateList"></select>
+  <button class="ghost" id="btnNew">+ New</button>
+  <input type="text" id="templateName" placeholder="Template name" style="min-width:160px;">
+  <button id="btnSave">Save</button>
+  <button class="danger" id="btnDelete">Del</button>
+  <span class="sep"></span>
+  <span class="spacer"></span>
+  <span id="status"></span>
+  <span class="standalone-only">
+    <span class="sep"></span>
+    <a href="/" style="text-decoration:none;color:var(--accent);font-weight:600;font-size:13px;">&larr; CRM</a>
+    <span class="sep"></span>
+    <input type="password" id="apiKey" placeholder="Bridge API key" style="min-width:200px;">
+  </span>
+</div>
+<div id="gjs"></div>
+
+<script src="https://unpkg.com/grapesjs@0.19.5/dist/grapes.min.js"></script>
+<script src="https://unpkg.com/grapesjs-preset-newsletter@1.0.2/dist/index.js"></script>
+<script>
+(function () {
+  var isStandalone = window.self === window.top;
+  if (isStandalone) document.documentElement.classList.add('standalone');
+
+  var TOKEN_KEY = 'bridge_tkey';
+  var urlParams = new URLSearchParams(window.location.search);
+  var keyFromUrl = urlParams.get('key') || '';
+  var token = keyFromUrl || localStorage.getItem(TOKEN_KEY) || '';
+  if (keyFromUrl) { localStorage.setItem(TOKEN_KEY, keyFromUrl); }
+  var elKey = document.getElementById('apiKey');
+  if (elKey) elKey.value = token;
+
+  var DEFAULT_HTML = '<div>' +
+    '<table width="100%" cellpadding="0" cellspacing="0" border="0" role="presentation">' +
+      '<tr><td align="center">' +
+        '<table width="600" cellpadding="0" cellspacing="0" border="0">' +
+          '<tr><td style="padding:32px 24px;">' +
+            '<h1 style="margin:0 0 12px;font-family:Helvetica,Arial,sans-serif;color:#111827;font-size:26px;">Headline</h1>' +
+            '<p style="margin:0 0 24px;font-family:Helvetica,Arial,sans-serif;color:#6b7280;font-size:15px;line-height:1.6;">Intro paragraph goes here.</p>' +
+            '<a href="https://example.com" style="display:inline-block;padding:12px 28px;background:#6366f1;color:#ffffff;text-decoration:none;border-radius:8px;font-family:Helvetica,Arial,sans-serif;font-weight:600;">Call to action</a>' +
+          '</td></tr>' +
+        '</table>' +
+      '</td></tr>' +
+    '</table>' +
+  '</div>';
+
+  var editor = grapesjs.init({
+    container: '#gjs',
+    height: '100%',
+    fromElement: false,
+    plugins: ['grapesjs-preset-newsletter'],
+    pluginsOpts: {
+      'grapesjs-preset-newsletter': {
+        inlineCss: true,
+        showBlocksOnLoad: true,
+        showStylesOnChange: true,
+      }
+    },
+    storageManager: false,
+    panels: { defaults: [] },
+    styleManager: { clearProperties: true },
+  });
+
+  editor.on('load', function () {
+    var panels = editor.Panels;
+    panels.getPanel('commands') && panels.removePanel('commands');
+    panels.getPanel('options') && panels.removePanel('options');
+    panels.getPanel('views') && panels.removePanel('views');
+    setComponents(DEFAULT_HTML, '');
+    loadList();
+  });
+
+  function setStatus(msg, ok) {
+    var el = document.getElementById('status');
+    el.textContent = msg || '';
+    el.style.color = ok === false ? '#ef4444' : '#059669';
+  }
+
+  function authHeaders() {
+    return { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token };
+  }
+
+  function api(path, method, body) {
+    var opts = { method: method || 'GET', headers: authHeaders() };
+    if (body !== undefined) { opts.body = JSON.stringify(body); }
+    return fetch('api/templates' + path, opts).then(function (r) {
+      if (r.status === 401) { throw new Error('Invalid or missing Bridge API key'); }
+      if (r.status === 404) { throw new Error('Not found'); }
+      return r.json().then(function (d) { if (d.error) throw new Error(d.error); return d; });
+    });
+  }
+
+  function getId() { return document.getElementById('templateList').value; }
+
+  function loadList() {
+    api('', 'GET').then(function (templates) {
+      var sel = document.getElementById('templateList');
+      sel.innerHTML = '';
+      var first = templates[0];
+      templates.forEach(function (t) {
+        var opt = document.createElement('option');
+        opt.value = t.id;
+        opt.textContent = t.name;
+        sel.appendChild(opt);
+      });
+      if (first) { document.getElementById('templateName').value = first.name; openTemplate(first.id); }
+      else { document.getElementById('templateName').value = 'Untitled'; showDefault(); }
+    }).catch(function (err) { setStatus(err.message, false); });
+  }
+
+  function showDefault() {
+    selectEmpty();
+    document.getElementById('templateName').value = 'Untitled';
+    setComponents(DEFAULT_HTML, '');
+  }
+
+  function selectEmpty() {
+    var sel = document.getElementById('templateList');
+    var stub = document.createElement('option');
+    stub.value = '';
+    stub.textContent = '(new)';
+    sel.prepend(stub);
+    sel.value = '';
+  }
+
+  function setComponents(html, css) {
+    editor.setComponents(html);
+    if (css) editor.setStyle(css);
+  }
+
+  function openTemplate(id) {
+    api('/' + id, 'GET').then(function (t) {
+      document.getElementById('templateName').value = t.name;
+      setComponents(t.html || DEFAULT_HTML, t.css || '');
+    }).catch(function (err) { setStatus(err.message, false); });
+  }
+
+  document.getElementById('templateList').addEventListener('change', function (e) {
+    var id = e.target.value;
+    if (!id) { document.getElementById('templateName').value = 'Untitled'; showDefault(); return; }
+    openTemplate(id);
+  });
+
+  document.getElementById('btnNew').addEventListener('click', function () {
+    selectEmpty();
+    document.getElementById('templateName').value = 'New Template';
+    showDefault();
+  });
+
+  function save() {
+    var name = document.getElementById('templateName').value || 'Untitled';
+    var id = getId();
+    var html = editor.getHtml();
+    var css = editor.getCss();
+    var json = JSON.stringify(editor.getComponents().toJSON());
+    var body = { name: name, html: html, css: css, json: json };
+    var req = id ? api('/' + id, 'PUT', body) : api('', 'POST', body);
+    req.then(function (t) {
+      setStatus('Saved');
+      var sel = document.getElementById('templateList');
+      if (id !== t.id) {
+        var opt = document.createElement('option');
+        opt.value = t.id;
+        opt.textContent = t.name;
+        sel.appendChild(opt);
+        sel.value = t.id;
+      }
+    }).catch(function (err) { setStatus(err.message, false); });
+  }
+
+  document.getElementById('btnSave').addEventListener('click', save);
+  document.addEventListener('keydown', function (e) { if ((e.ctrlKey || e.metaKey) && e.key === 's') { e.preventDefault(); save(); } });
+
+  document.getElementById('btnDelete').addEventListener('click', function () {
+    var id = getId();
+    if (!id) return;
+    api('/' + id, 'DELETE').then(function () {
+      setStatus('Deleted');
+      loadList();
+    }).catch(function (err) { setStatus(err.message, false); });
+  });
+
+  if (elKey) {
+    elKey.addEventListener('change', function (e) {
+      token = e.target.value;
+      localStorage.setItem(TOKEN_KEY, token);
+      setStatus('Key saved');
+      loadList();
+    });
+  }
+
+  window.saveTemplateExternally = save;
+})();
+</script>
+</body>
+</html>

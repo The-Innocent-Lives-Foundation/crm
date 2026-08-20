@@ -52,6 +52,7 @@ const VARIABLE_CONSUMING_ACTION_TYPES = new Set<WorkflowActionType>([
   WorkflowActionType.CODE,
   WorkflowActionType.LOGIC_FUNCTION,
   WorkflowActionType.SEND_EMAIL,
+  WorkflowActionType.SEND_EMAIL_TEMPLATE,
   ...RECORD_CRUD_ACTION_TYPES,
 ]);
 
