@@ -81,8 +81,9 @@ if [ -d /home/stephen/resend-bridge ] && [ -f /home/stephen/resend-bridge/docker
   echo "Stopping legacy resend-bridge stack"
   (cd /home/stephen/resend-bridge && docker compose down 2>/dev/null || true)
 fi
-# Force-remove any leftover container with the name resend-bridge
-docker rm -f resend-bridge 2>/dev/null || true
+# Clean up any leftover containers from previous runs
+docker compose -p crm down 2>/dev/null || true
+docker rm -f twenty-server twenty-worker twenty-db twenty-redis resend-bridge crm-server-1 2>/dev/null || true
 
 docker compose up -d --build --force-recreate 2>&1 | tail -10
 

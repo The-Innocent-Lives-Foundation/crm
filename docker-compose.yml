@@ -3,6 +3,7 @@ name: crm
 services:
   server:
     image: mirror.gcr.io/twentycrm/twenty:${TAG:-latest}
+    container_name: twenty-server
     volumes:
       - ./packages/twenty-server/dist:/app/packages/twenty-server/dist
       - ./packages/twenty-front/build:/app/packages/twenty-server/dist/front
@@ -32,9 +33,10 @@ services:
         condition: service_healthy
     healthcheck:
       test: curl --fail http://localhost:3000/healthz
-      interval: 5s
-      timeout: 5s
-      retries: 20
+      interval: 10s
+      timeout: 10s
+      retries: 40
+      start_period: 60s
     restart: always
 
   worker:
