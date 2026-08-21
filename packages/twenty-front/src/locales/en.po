@@ -7187,6 +7187,46 @@ msgid "Enter CC emails, comma-separated"
 msgstr "Enter CC emails, comma-separated"
 
 #. js-lingui-id: MJoxIi
+#: src/modules/workflow/workflow-steps/workflow-actions/components/WorkflowEditActionSendEmailTemplate.tsx
+msgid "Template"
+msgstr "Template"
+
+#: src/modules/workflow/workflow-steps/workflow-actions/components/WorkflowEditActionSendEmailTemplate.tsx
+msgid "Pick a saved email template from the Email Templates object"
+msgstr "Pick a saved email template from the Email Templates object"
+
+#: src/modules/workflow/workflow-steps/workflow-actions/components/WorkflowEditActionSendEmailTemplate.tsx
+msgid "To"
+msgstr "To"
+
+#: src/modules/workflow/workflow-steps/workflow-actions/components/WorkflowEditActionSendEmailTemplate.tsx
+msgid "Enter email, comma-separated"
+msgstr "Enter email, comma-separated"
+
+#: src/modules/workflow/workflow-steps/workflow-actions/components/WorkflowEditActionSendEmailTemplate.tsx
+msgid "CC"
+msgstr "CC"
+
+#: src/modules/workflow/workflow-steps/workflow-actions/components/WorkflowEditActionSendEmailTemplate.tsx
+msgid "Enter CC emails, comma-separated"
+msgstr "Enter CC emails, comma-separated"
+
+#: src/modules/workflow/workflow-steps/workflow-actions/components/WorkflowEditActionSendEmailTemplate.tsx
+msgid "BCC"
+msgstr "BCC"
+
+#: src/modules/workflow/workflow-steps/workflow-actions/components/WorkflowEditActionSendEmailTemplate.tsx
+msgid "Enter BCC emails, comma-separated"
+msgstr "Enter BCC emails, comma-separated"
+
+#: src/modules/workflow/workflow-steps/workflow-actions/components/WorkflowEditActionSendEmailTemplate.tsx
+msgid "Subject"
+msgstr "Subject"
+
+#: src/modules/workflow/workflow-steps/workflow-actions/components/WorkflowEditActionSendEmailTemplate.tsx
+msgid "Leave empty to use the template's subject"
+msgstr "Leave empty to use the template's subject"
+
 #: src/modules/workflow/workflow-steps/workflow-actions/components/WorkflowEditActionEmailBase.tsx
 msgid "Enter email subject"
 msgstr "Enter email subject"
