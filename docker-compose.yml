@@ -5,6 +5,7 @@ services:
     image: mirror.gcr.io/twentycrm/twenty:${TAG:-latest}
     container_name: twenty-server
     volumes:
+      - ./packages/twenty-shared/dist:/app/packages/twenty-shared/dist
       - ./packages/twenty-server/dist:/app/packages/twenty-server/dist
       - ./packages/twenty-front/build:/app/packages/twenty-server/dist/front
       - server-local-data:/app/packages/twenty-server/.local-storage
@@ -43,6 +44,8 @@ services:
     image: mirror.gcr.io/twentycrm/twenty:${TAG:-latest}
     container_name: twenty-worker
     volumes:
+      - ./packages/twenty-shared/dist:/app/packages/twenty-shared/dist
+      - ./packages/twenty-server/dist:/app/packages/twenty-server/dist
       - server-local-data:/app/packages/twenty-server/.local-storage
     command: ["yarn", "worker:prod"]
     environment:
