@@ -1,18 +1,17 @@
-import { useEffect, useState } from 'react';
-
-import { t } from '@lingui/core/macro';
-
+import { FormMultiTextFieldInput } from '@/object-record/record-field/ui/form-types/components/FormMultiTextFieldInput';
 import { FormSelectFieldInput } from '@/object-record/record-field/ui/form-types/components/FormSelectFieldInput';
 import { FormTextFieldInput } from '@/object-record/record-field/ui/form-types/components/FormTextFieldInput';
+import { useFindManyRecords } from '@/object-record/hooks/useFindManyRecords';
 import { type WorkflowSendEmailTemplateAction } from '@/workflow/types/Workflow';
 import { WorkflowStepBody } from '@/workflow/workflow-steps/components/WorkflowStepBody';
 import { WorkflowStepFooter } from '@/workflow/workflow-steps/components/WorkflowStepFooter';
 import { useSendEmailTemplateForm } from '@/workflow/workflow-steps/workflow-actions/hooks/useSendEmailTemplateForm';
 import { WorkflowVariablePicker } from '@/workflow/workflow-variables/components/WorkflowVariablePicker';
+import { type SelectOption } from 'twenty-ui/input';
 
-type TemplateOption = {
-  label: string;
-  value: string;
+type EmailTemplateRecord = {
+  id: string;
+  name: string;
 };
 
 type WorkflowEditActionSendEmailTemplateProps = {
@@ -40,56 +39,32 @@ export const WorkflowEditActionSendEmailTemplate = ({
     readonly: actionOptions.readonly === true,
   });
 
-  const [templateOptions, setTemplateOptions] = useState<TemplateOption[]>([]);
-  const [templatesLoading, setTemplatesLoading] = useState(true);
+  const { records: emailTemplates, loading: templatesLoading } =
+    useFindManyRecords<EmailTemplateRecord>({
+      objectNameSingular: 'emailTemplate',
+      recordGqlFields: {
+        id: true,
+        name: true,
+      },
+      limit: 100,
+    });
 
-  useEffect(() => {
-    fetch('/graphql', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'same-origin',
-      body: JSON.stringify({
-        query: `
-          query ListEmailTemplatesForWorkflow {
-            emailTemplates(first: 100) {
-              edges {
-                node {
-                  id
-                  name
-                }
-              }
-            }
-          }
-        `,
-      }),
-    })
-      .then((response) => response.json())
-      .then((res) => {
-        const edges = res.data?.emailTemplates?.edges ?? [];
-        const options = edges.map((edge: { node: { id: string; name: string } }) => ({
-          value: edge.node.id,
-          label: edge.node.name ?? 'Untitled',
-        }));
-
-        setTemplateOptions(options);
-      })
-      .catch(() => {
-        setTemplateOptions([]);
-      })
-      .finally(() => {
-        setTemplatesLoading(false);
-      });
-  }, []);
+  const templateOptions: SelectOption[] = emailTemplates.map((template) => ({
+    label: template.name || 'Untitled template',
+    value: template.id,
+  }));
 
   return (
     <>
       <WorkflowStepBody>
         <FormSelectFieldInput
-          label={t`Template`}
+          label="Template"
           hint={
-            actionOptions.readonly
-              ? undefined
-              : t`Pick a saved email template from the Email Templates object`
+            templatesLoading
+              ? 'Loading templates...'
+              : templateOptions.length === 0
+                ? 'No templates yet. Create one under Email Templates, then come back.'
+                : 'Pick a saved email template'
           }
           defaultValue={formData.templateId}
           options={templateOptions}
@@ -97,11 +72,11 @@ export const WorkflowEditActionSendEmailTemplate = ({
             handleFieldChange('templateId', value ?? '');
           }}
           VariablePicker={WorkflowVariablePicker}
-          readonly={actionOptions.readonly || templatesLoading}
+          readonly={actionOptions.readonly === true || templatesLoading}
         />
-        <FormTextFieldInput
-          label={t`To`}
-          placeholder={t`Enter email, comma-separated`}
+        <FormMultiTextFieldInput
+          label="To"
+          placeholder="person@example.com"
           readonly={actionOptions.readonly}
           defaultValue={formData.recipients.to}
           onChange={(value: string) => {
@@ -112,9 +87,9 @@ export const WorkflowEditActionSendEmailTemplate = ({
           }}
           VariablePicker={WorkflowVariablePicker}
         />
-        <FormTextFieldInput
-          label={t`CC`}
-          placeholder={t`Enter CC emails, comma-separated`}
+        <FormMultiTextFieldInput
+          label="CC"
+          placeholder="Optional CC"
           readonly={actionOptions.readonly}
           defaultValue={formData.recipients.cc}
           onChange={(value: string) => {
@@ -125,9 +100,9 @@ export const WorkflowEditActionSendEmailTemplate = ({
           }}
           VariablePicker={WorkflowVariablePicker}
         />
-        <FormTextFieldInput
-          label={t`BCC`}
-          placeholder={t`Enter BCC emails, comma-separated`}
+        <FormMultiTextFieldInput
+          label="BCC"
+          placeholder="Optional BCC"
           readonly={actionOptions.readonly}
           defaultValue={formData.recipients.bcc}
           onChange={(value: string) => {
@@ -139,8 +114,8 @@ export const WorkflowEditActionSendEmailTemplate = ({
           VariablePicker={WorkflowVariablePicker}
         />
         <FormTextFieldInput
-          label={t`Subject`}
-          placeholder={t`Leave empty to use the template's subject`}
+          label="Subject override"
+          placeholder="Leave empty to use the template subject"
           readonly={actionOptions.readonly}
           defaultValue={formData.subject}
           onChange={(value: string) => {
@@ -149,7 +124,9 @@ export const WorkflowEditActionSendEmailTemplate = ({
           VariablePicker={WorkflowVariablePicker}
         />
       </WorkflowStepBody>
-      {!actionOptions.readonly && <WorkflowStepFooter stepId={action.id} />}
+      {actionOptions.readonly !== true && (
+        <WorkflowStepFooter stepId={action.id} />
+      )}
     </>
   );
 };
