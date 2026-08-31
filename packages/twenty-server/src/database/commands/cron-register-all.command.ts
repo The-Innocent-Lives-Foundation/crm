@@ -31,6 +31,7 @@ import { WorkflowCleanWorkflowRunsCronCommand } from 'src/modules/workflow/workf
 import { WorkflowHandleStaledRunsCronCommand } from 'src/modules/workflow/workflow-runner/workflow-run-queue/cron/command/workflow-handle-staled-runs.cron.command';
 import { WorkflowRunEnqueueCronCommand } from 'src/modules/workflow/workflow-runner/workflow-run-queue/cron/command/workflow-run-enqueue.cron.command';
 import { WorkflowCronTriggerCronCommand } from 'src/modules/workflow/workflow-trigger/automated-trigger/crons/commands/workflow-cron-trigger.cron.command';
+import { FunraiseBackfillCronCommand } from 'src/modules/funraise/commands/funraise-backfill.cron.command';
 
 @Command({
   name: 'cron:register:all',
@@ -71,6 +72,7 @@ export class CronRegisterAllCommand extends CommandRunner {
     private readonly staleRegistrationCleanupCronCommand: StaleRegistrationCleanupCronCommand,
     private readonly pendingFileCleanupCronCommand: PendingFileCleanupCronCommand,
     private readonly billingReminderCronCommand: BillingReminderCronCommand,
+    private readonly funraiseBackfillCronCommand: FunraiseBackfillCronCommand,
     private readonly twentyConfigService: TwentyConfigService,
   ) {
     super();
@@ -88,6 +90,10 @@ export class CronRegisterAllCommand extends CommandRunner {
     );
 
     const isBillingEnabled = this.twentyConfigService.get('IS_BILLING_ENABLED');
+
+    const isFunraiseBackfillEnabled = this.twentyConfigService.get(
+      'FUNRAISE_BACKFILL_ENABLED',
+    );
 
     const allCommands = [
       {
@@ -200,6 +206,11 @@ export class CronRegisterAllCommand extends CommandRunner {
         name: 'BillingReminder',
         command: this.billingReminderCronCommand,
         isEnabled: isBillingEnabled,
+      },
+      {
+        name: 'FunraiseBackfill',
+        command: this.funraiseBackfillCronCommand,
+        isEnabled: isFunraiseBackfillEnabled,
       },
     ];
 

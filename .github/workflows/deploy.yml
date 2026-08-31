@@ -25,6 +25,12 @@ jobs:
           git log -1 --oneline
 
       - name: Deploy to server
+        env:
+          FUNRAISE_WORKSPACE_ID: ${{ secrets.FUNRAISE_WORKSPACE_ID }}
+          FUNRAISE_ORG_ID: ${{ secrets.FUNRAISE_ORG_ID }}
+          FUNRAISE_API_KEY: ${{ secrets.FUNRAISE_API_KEY }}
+          FUNRAISE_WEBHOOK_SIGNING_SECRET: ${{ secrets.FUNRAISE_WEBHOOK_SIGNING_SECRET }}
+          FUNRAISE_API_BASE_URL: ${{ secrets.FUNRAISE_API_BASE_URL }}
         run: |
           chmod +x deploy.sh
           ./deploy.sh

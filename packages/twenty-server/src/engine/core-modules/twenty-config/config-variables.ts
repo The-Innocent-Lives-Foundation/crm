@@ -2114,6 +2114,62 @@ export class ConfigVariables {
   })
   @IsOptional()
   APP_REGISTRY_TOKEN: string;
+
+  @ConfigVariablesMetadata({
+    group: ConfigVariablesGroup.ADVANCED_SETTINGS,
+    description:
+      'Twenty workspace id that receives Funraise donations and contacts',
+    type: ConfigVariableType.STRING,
+  })
+  @IsString()
+  @IsOptional()
+  FUNRAISE_WORKSPACE_ID: string;
+
+  @ConfigVariablesMetadata({
+    group: ConfigVariablesGroup.ADVANCED_SETTINGS,
+    description: 'Funraise organization id',
+    type: ConfigVariableType.STRING,
+  })
+  @IsString()
+  @IsOptional()
+  FUNRAISE_ORG_ID: string;
+
+  @ConfigVariablesMetadata({
+    group: ConfigVariablesGroup.ADVANCED_SETTINGS,
+    isSensitive: true,
+    description: 'Funraise API key used to backfill donations via REST',
+    type: ConfigVariableType.STRING,
+  })
+  @IsString()
+  @IsOptional()
+  FUNRAISE_API_KEY: string;
+
+  @ConfigVariablesMetadata({
+    group: ConfigVariablesGroup.ADVANCED_SETTINGS,
+    isSensitive: true,
+    description: 'Funraise webhook signing secret',
+    type: ConfigVariableType.STRING,
+  })
+  @IsString()
+  @IsOptional()
+  FUNRAISE_WEBHOOK_SIGNING_SECRET: string;
+
+  @ConfigVariablesMetadata({
+    group: ConfigVariablesGroup.ADVANCED_SETTINGS,
+    description: 'Base URL of the Funraise REST API',
+    type: ConfigVariableType.STRING,
+  })
+  @IsString()
+  @IsOptional()
+  FUNRAISE_API_BASE_URL: string;
+
+  @ConfigVariablesMetadata({
+    group: ConfigVariablesGroup.ADVANCED_SETTINGS,
+    description: 'Enable periodic Funraise donation backfill',
+    type: ConfigVariableType.BOOLEAN,
+  })
+  @IsOptional()
+  FUNRAISE_BACKFILL_ENABLED = false;
 }
 
 export const validate = (config: Record<string, unknown>): ConfigVariables => {

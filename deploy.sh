@@ -64,6 +64,27 @@ if [ -f /opt/twenty/.env ] && [ ! -f .env ]; then
   echo "Reusing /opt/twenty/.env for the stack"
   cp /opt/twenty/.env .env
 fi
+
+# Inject Funraise integration secrets from GitHub Actions secrets (env vars).
+# These are provided by the deploy workflow's env: block and never committed.
+inject_funraise_env() {
+  local var_name="$1"
+  local value="${!var_name:-}"
+  if [ -n "$value" ]; then
+    if grep -q "^${var_name}=" .env 2>/dev/null; then
+      sed -i "s|^${var_name}=.*|${var_name}=${value}|" .env
+    else
+      echo "${var_name}=${value}" >> .env
+    fi
+  fi
+}
+inject_funraise_env FUNRAISE_WORKSPACE_ID
+inject_funraise_env FUNRAISE_ORG_ID
+inject_funraise_env FUNRAISE_API_KEY
+inject_funraise_env FUNRAISE_WEBHOOK_SIGNING_SECRET
+inject_funraise_env FUNRAISE_API_BASE_URL
+inject_funraise_env FUNRAISE_BACKFILL_ENABLED
+
 if [ -f /home/stephen/resend-bridge/.env ] && [ ! -f resend-bridge/.env ]; then
   echo "Reusing resend-bridge/.env"
   cp /home/stephen/resend-bridge/.env resend-bridge/.env
