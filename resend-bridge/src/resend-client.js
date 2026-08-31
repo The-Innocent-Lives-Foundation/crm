@@ -18,12 +18,17 @@ export async function sendEmail({ to, from, subject, html, text, headers, campai
     ...(headers || {}),
   };
 
+  const bodyHtml = (html || `<p>${text || subject}</p>`).replace(
+    /\{\{\s*unsubscribeUrl\s*\}\}/g,
+    unsubUrl,
+  );
+
   try {
     const { data, error } = await resend.emails.send({
       from: fromAddress,
       to: recipientList,
       subject,
-      html: html || `<p>${text || subject}</p>`,
+      html: bodyHtml,
       text,
       headers: extraHeaders,
       tags: campaignId ? [{ name: 'campaign', value: campaignId }] : undefined,
@@ -63,7 +68,7 @@ export async function addSuppression(email) {
   }
 }
 
-function buildUnsubscribeUrl(email, campaignId) {
+export function buildUnsubscribeUrl(email, campaignId) {
   const token = buildHmacToken(email, campaignId);
   const params = new URLSearchParams({ email, t: token });
   if (campaignId) params.set('campaign', campaignId);

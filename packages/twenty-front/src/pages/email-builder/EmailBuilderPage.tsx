@@ -3,6 +3,8 @@ import 'grapesjs/dist/css/grapes.min.css';
 import grapesjsPresetNewsletter from 'grapesjs-preset-newsletter';
 import { useEffect, useRef, useState } from 'react';
 
+import { getTokenPair } from '@/apollo/utils/getTokenPair';
+
 const GRAPHQL_URL = '/graphql';
 
 function gql(query: string, variables?: Record<string, unknown>) {
@@ -85,6 +87,22 @@ const buttonStyle: React.CSSProperties = {
   background: '#6366f1',
 };
 
+type BlastSource = 'messageList' | 'company' | 'selected';
+type NamedOption = { id: string; name: string };
+type PersonOption = { id: string; label: string; email: string };
+
+const personLabel = (node: {
+  name?: { firstName?: string; lastName?: string };
+  emails?: { primaryEmail?: string };
+}) => {
+  const name = [node.name?.firstName, node.name?.lastName]
+    .filter(Boolean)
+    .join(' ')
+    .trim();
+  const email = node.emails?.primaryEmail || '';
+  return name ? `${name} (${email})` : email || 'No email';
+};
+
 export const EmailBuilderPage = () => {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const editorRef = useRef<ReturnType<typeof grapesjs.init> | null>(null);
@@ -94,6 +112,71 @@ export const EmailBuilderPage = () => {
   const [subject, setSubject] = useState('');
   const [status, setStatus] = useState('');
   const [showMergeMenu, setShowMergeMenu] = useState(false);
+  const [showBlast, setShowBlast] = useState(false);
+  const [blastSource, setBlastSource] = useState<BlastSource>('selected');
+  const [blastListId, setBlastListId] = useState('');
+  const [blastCompanyId, setBlastCompanyId] = useState('');
+  const [blastPersonIds, setBlastPersonIds] = useState<string[]>([]);
+  const [blastLists, setBlastLists] = useState<NamedOption[]>([]);
+  const [blastCompanies, setBlastCompanies] = useState<NamedOption[]>([]);
+  const [blastPeople, setBlastPeople] = useState<PersonOption[]>([]);
+  const [blastPersonQuery, setBlastPersonQuery] = useState('');
+  const [blastCampaignId, setBlastCampaignId] = useState('');
+  const [blastPreview, setBlastPreview] = useState<{
+    total: number;
+    skipped: number;
+    sample: string[];
+  } | null>(null);
+  const [blastJob, setBlastJob] = useState<{
+    id: string;
+    status: string;
+    total: number;
+    sent: number;
+    failed: number;
+    skipped: number;
+    error?: string | null;
+  } | null>(null);
+  const [blastBusy, setBlastBusy] = useState(false);
+
+  const getAccessToken = () =>
+    getTokenPair()?.accessOrWorkspaceAgnosticToken?.token || '';
+
+  const blastApi = async (
+    path: string,
+    method: string,
+    body?: Record<string, unknown>,
+  ) => {
+    const opts: RequestInit = {
+      method,
+      credentials: 'same-origin',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${getAccessToken()}`,
+      },
+    };
+    if (body !== undefined) opts.body = JSON.stringify(body);
+    const response = await fetch(`/rest/email-blast${path}`, opts);
+    const payload = await response.json();
+    if (!response.ok) {
+      throw new Error(payload.message || payload.error || 'Blast request failed');
+    }
+    return payload;
+  };
+
+  const blastAudience = () => ({
+    source: blastSource,
+    messageListId: blastListId || undefined,
+    companyId: blastCompanyId || undefined,
+    personIds: blastPersonIds,
+  });
+
+  const edgesToOptions = (
+    connection: { edges?: { node: { id: string; name?: string } }[] } | undefined,
+  ): NamedOption[] =>
+    (connection?.edges ?? []).map((edge) => ({
+      id: edge.node.id,
+      name: edge.node.name || 'Untitled',
+    }));
 
   useEffect(() => {
     if (!containerRef.current || editorRef.current) return;
@@ -316,6 +399,209 @@ export const EmailBuilderPage = () => {
     }
   };
 
+  const openBlast = async () => {
+    if (!selectedId) {
+      setStatus('Save the template first');
+      return;
+    }
+    setShowBlast(true);
+    setBlastJob(null);
+    setBlastPreview(null);
+    setBlastCampaignId(
+      `blast-${name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')}-${new Date().toISOString().slice(0, 10)}`,
+    );
+    try {
+      const [listsRes, companiesRes, peopleRes] = await Promise.all([
+        gql(`query { messageLists(first: 100) { edges { node { id name } } } }`),
+        gql(`query { companies(first: 100) { edges { node { id name } } } }`),
+        gql(`
+          query {
+            people(first: 100) {
+              edges {
+                node {
+                  id
+                  name { firstName lastName }
+                  emails { primaryEmail }
+                }
+              }
+            }
+          }
+        `),
+      ]);
+      setBlastLists(edgesToOptions(listsRes.data?.messageLists));
+      setBlastCompanies(edgesToOptions(companiesRes.data?.companies));
+      setBlastPeople(
+        (peopleRes.data?.people?.edges ?? []).map(
+          (edge: {
+            node: {
+              id: string;
+              name?: { firstName?: string; lastName?: string };
+              emails?: { primaryEmail?: string };
+            };
+          }) => ({
+            id: edge.node.id,
+            label: personLabel(edge.node),
+            email: edge.node.emails?.primaryEmail || '',
+          }),
+        ),
+      );
+    } catch (error) {
+      setStatus(`Load recipients failed: ${(error as Error).message}`);
+    }
+  };
+
+  const refreshBlastPreview = async (audience = blastAudience()) => {
+    if (
+      (audience.source === 'messageList' && !audience.messageListId) ||
+      (audience.source === 'company' && !audience.companyId) ||
+      (audience.source === 'selected' && audience.personIds.length === 0)
+    ) {
+      setBlastPreview({ total: 0, skipped: 0, sample: [] });
+      return;
+    }
+    try {
+      const payload = await blastApi('/preview', 'POST', audience);
+      setBlastPreview({
+        total: payload.total ?? 0,
+        skipped: payload.skipped ?? 0,
+        sample: payload.sample ?? [],
+      });
+    } catch (error) {
+      setBlastPreview(null);
+      setStatus(`Preview failed: ${(error as Error).message}`);
+    }
+  };
+
+  const searchPeople = async (query: string) => {
+    setBlastPersonQuery(query);
+    const trimmed = query.trim();
+    const res = await gql(
+      trimmed
+        ? `
+          query SearchPeople($q: String!) {
+            people(
+              first: 50
+              filter: {
+                or: [
+                  { name: { firstName: { ilike: $q } } }
+                  { name: { lastName: { ilike: $q } } }
+                  { emails: { primaryEmail: { ilike: $q } } }
+                ]
+              }
+            ) {
+              edges {
+                node {
+                  id
+                  name { firstName lastName }
+                  emails { primaryEmail }
+                }
+              }
+            }
+          }
+        `
+        : `
+          query {
+            people(first: 100) {
+              edges {
+                node {
+                  id
+                  name { firstName lastName }
+                  emails { primaryEmail }
+                }
+              }
+            }
+          }
+        `,
+      trimmed ? { q: `%${trimmed}%` } : undefined,
+    );
+    setBlastPeople(
+      (res.data?.people?.edges ?? []).map(
+        (edge: {
+          node: {
+            id: string;
+            name?: { firstName?: string; lastName?: string };
+            emails?: { primaryEmail?: string };
+          };
+        }) => ({
+          id: edge.node.id,
+          label: personLabel(edge.node),
+          email: edge.node.emails?.primaryEmail || '',
+        }),
+      ),
+    );
+  };
+
+  const togglePerson = (id: string) => {
+    setBlastPersonIds((current) => {
+      const next = current.includes(id)
+        ? current.filter((item) => item !== id)
+        : [...current, id];
+      void refreshBlastPreview({
+        source: 'selected',
+        personIds: next,
+        messageListId: undefined,
+        companyId: undefined,
+      });
+      return next;
+    });
+  };
+
+  const startBlastSend = async () => {
+    if (!selectedId || blastBusy) return;
+    const count = blastPreview?.total ?? 0;
+    if (count < 1) {
+      setStatus('No recipients');
+      return;
+    }
+    if (
+      !window.confirm(
+        `Send "${subject || name}" to ${count} recipient${count === 1 ? '' : 's'}? This cannot be undone.`,
+      )
+    ) {
+      return;
+    }
+    setBlastBusy(true);
+    try {
+      await handleSave();
+      const payload = await blastApi('', 'POST', {
+        templateId: selectedId,
+        subject,
+        campaignId: blastCampaignId,
+        ...blastAudience(),
+      });
+      const job = payload.job;
+      setBlastJob(job);
+      pollBlast(job.id);
+    } catch (error) {
+      setBlastBusy(false);
+      setStatus(`Blast failed: ${(error as Error).message}`);
+    }
+  };
+
+  const pollBlast = (id: string) => {
+    const tick = async () => {
+      try {
+        const payload = await blastApi(`/${id}`, 'GET');
+        const job = payload.job;
+        setBlastJob(job);
+        if (job.status === 'queued' || job.status === 'running') {
+          window.setTimeout(() => void tick(), 1000);
+          return;
+        }
+        setBlastBusy(false);
+        setStatus(
+          job.status === 'done'
+            ? `Blast done: ${job.sent} sent, ${job.failed} failed, ${job.skipped} skipped`
+            : `Blast ${job.status}${job.error ? `: ${job.error}` : ''}`,
+        );
+      } catch (error) {
+        setBlastBusy(false);
+        setStatus(`Blast status failed: ${(error as Error).message}`);
+      }
+    };
+    void tick();
+  };
+
   const insertMergeTag = (tag: string) => {
     const editor = editorRef.current;
     if (!editor) return;
@@ -478,10 +764,218 @@ export const EmailBuilderPage = () => {
         >
           Del
         </button>
+        <button
+          style={{ ...buttonStyle, background: '#0f766e' }}
+          onClick={() => void openBlast()}
+          disabled={!selectedId}
+        >
+          Send blast
+        </button>
         <span style={{ flex: 1 }} />
         <span style={{ fontSize: 12, color: '#059669', fontWeight: 600 }}>{status}</span>
       </div>
       <div ref={containerRef} style={{ flex: 1, minHeight: 0 }} />
+      {showBlast && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(17,24,39,0.45)',
+            zIndex: 10000,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: 24,
+          }}
+          onClick={() => !blastBusy && setShowBlast(false)}
+        >
+          <div
+            style={{
+              background: '#fff',
+              borderRadius: 12,
+              width: '100%',
+              maxWidth: 480,
+              padding: 24,
+              boxShadow: '0 20px 40px rgba(0,0,0,0.18)',
+            }}
+            onClick={(event) => event.stopPropagation()}
+          >
+            <h2 style={{ margin: '0 0 16px', fontSize: 18 }}>Send blast</h2>
+            <p style={{ margin: '0 0 12px', fontSize: 13, color: '#4b5563' }}>
+              Sends this saved template once. Skips suppressed and empty emails.
+              Merge tags like {'{{person.name.firstName}}'} are filled per person.
+            </p>
+            <label style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 6 }}>
+              Recipients
+            </label>
+            <div style={{ display: 'flex', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
+              {([
+                ['messageList', 'List'],
+                ['company', 'Company'],
+                ['selected', 'People'],
+              ] as const).map(([value, label]) => (
+                <button
+                  key={value}
+                  style={{
+                    ...buttonStyle,
+                    background: blastSource === value ? '#0f766e' : '#e5e7eb',
+                    color: blastSource === value ? '#fff' : '#111827',
+                  }}
+                  onClick={() => {
+                    setBlastSource(value);
+                    void refreshBlastPreview({
+                      source: value,
+                      messageListId: blastListId || undefined,
+                      companyId: blastCompanyId || undefined,
+                      personIds: blastPersonIds,
+                    });
+                  }}
+                  disabled={blastBusy}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+            {blastSource === 'messageList' && (
+              <select
+                style={{ ...inputStyle, width: '100%', marginBottom: 12 }}
+                value={blastListId}
+                disabled={blastBusy}
+                onChange={(event) => {
+                  setBlastListId(event.target.value);
+                  void refreshBlastPreview({
+                    source: 'messageList',
+                    messageListId: event.target.value || undefined,
+                    companyId: undefined,
+                    personIds: [],
+                  });
+                }}
+              >
+                <option value="">
+                  {blastLists.length ? 'Pick a list' : 'No lists yet — create one under Lists'}
+                </option>
+                {blastLists.map((item) => (
+                  <option key={item.id} value={item.id}>
+                    {item.name}
+                  </option>
+                ))}
+              </select>
+            )}
+            {blastSource === 'company' && (
+              <select
+                style={{ ...inputStyle, width: '100%', marginBottom: 12 }}
+                value={blastCompanyId}
+                disabled={blastBusy}
+                onChange={(event) => {
+                  setBlastCompanyId(event.target.value);
+                  void refreshBlastPreview({
+                    source: 'company',
+                    companyId: event.target.value || undefined,
+                    messageListId: undefined,
+                    personIds: [],
+                  });
+                }}
+              >
+                <option value="">Pick a company</option>
+                {blastCompanies.map((item) => (
+                  <option key={item.id} value={item.id}>
+                    {item.name}
+                  </option>
+                ))}
+              </select>
+            )}
+            {blastSource === 'selected' && (
+              <div style={{ marginBottom: 12 }}>
+                <input
+                  style={{ ...inputStyle, width: '100%', marginBottom: 8 }}
+                  value={blastPersonQuery}
+                  disabled={blastBusy}
+                  placeholder="Search people"
+                  onChange={(event) => void searchPeople(event.target.value)}
+                />
+                <div
+                  style={{
+                    maxHeight: 180,
+                    overflowY: 'auto',
+                    border: '1px solid #e5e7eb',
+                    borderRadius: 8,
+                    padding: 8,
+                  }}
+                >
+                  {blastPeople.length === 0 && (
+                    <div style={{ fontSize: 12, color: '#6b7280' }}>No people found</div>
+                  )}
+                  {blastPeople.map((person) => (
+                    <label
+                      key={person.id}
+                      style={{
+                        display: 'flex',
+                        gap: 8,
+                        alignItems: 'center',
+                        fontSize: 13,
+                        padding: '4px 0',
+                      }}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={blastPersonIds.includes(person.id)}
+                        disabled={blastBusy}
+                        onChange={() => togglePerson(person.id)}
+                      />
+                      <span>{person.label}</span>
+                    </label>
+                  ))}
+                </div>
+                {blastPersonIds.length > 0 && (
+                  <div style={{ fontSize: 12, color: '#4b5563', marginTop: 6 }}>
+                    {blastPersonIds.length} selected
+                  </div>
+                )}
+              </div>
+            )}
+            <input
+              style={{ ...inputStyle, width: '100%', marginBottom: 12 }}
+              value={blastCampaignId}
+              disabled={blastBusy}
+              onChange={(event) => setBlastCampaignId(event.target.value)}
+              placeholder="Campaign id (tracking)"
+            />
+            {blastPreview && (
+              <p style={{ margin: '0 0 12px', fontSize: 13 }}>
+                <strong>{blastPreview.total}</strong> will be sent
+                {blastPreview.skipped > 0 ? `, ${blastPreview.skipped} skipped` : ''}.
+                {blastPreview.sample.length > 0
+                  ? ` Sample: ${blastPreview.sample.join(', ')}`
+                  : ''}
+              </p>
+            )}
+            {blastJob && (
+              <p style={{ margin: '0 0 12px', fontSize: 13, color: '#0f766e' }}>
+                {blastJob.status}: {blastJob.sent}/{blastJob.total} sent
+                {blastJob.failed ? `, ${blastJob.failed} failed` : ''}
+              </p>
+            )}
+            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+              <button
+                style={{ ...buttonStyle, background: '#e5e7eb', color: '#111827' }}
+                onClick={() => setShowBlast(false)}
+                disabled={blastBusy}
+              >
+                Close
+              </button>
+              <button
+                style={buttonStyle}
+                onClick={() => void startBlastSend()}
+                disabled={blastBusy || !blastPreview || blastPreview.total < 1}
+              >
+                {blastBusy
+                  ? 'Sending…'
+                  : `Send ${blastPreview?.total ?? 0} email${(blastPreview?.total ?? 0) === 1 ? '' : 's'}`}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

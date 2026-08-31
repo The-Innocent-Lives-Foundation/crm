@@ -27,6 +27,116 @@ async function graphql(query, variables = {}) {
   }
 }
 
+const PERSON_FIELDS = `
+  id
+  name { firstName lastName }
+  emails { primaryEmail }
+  jobTitle
+  city
+  company { name }
+`;
+
+async function paginate(queryName, buildQuery, extraVars = {}) {
+  const nodes = [];
+  let after = null;
+  let hasNextPage = true;
+
+  while (hasNextPage) {
+    const result = await graphql(
+      buildQuery(),
+      after ? { after, ...extraVars } : extraVars,
+    );
+    if (!result.success) return result;
+    const connection = result.data?.[queryName];
+    const edges = connection?.edges ?? [];
+    for (const edge of edges) {
+      if (edge?.node) nodes.push(edge.node);
+    }
+    hasNextPage = !!connection?.pageInfo?.hasNextPage;
+    after = connection?.pageInfo?.endCursor || null;
+    if (!after) hasNextPage = false;
+  }
+
+  return { success: true, data: nodes };
+}
+
+export async function listPeopleWithEmails() {
+  return paginate('people', () => /* GraphQL */ `
+    query ListPeople($after: String) {
+      people(first: 100, after: $after) {
+        edges { node { ${PERSON_FIELDS} } }
+        pageInfo { hasNextPage endCursor }
+      }
+    }
+  `);
+}
+
+export async function listPeopleByCompany(companyId) {
+  return paginate(
+    'people',
+    () => /* GraphQL */ `
+      query ListPeopleByCompany($companyId: UUID!, $after: String) {
+        people(first: 100, after: $after, filter: { companyId: { eq: $companyId } }) {
+          edges { node { ${PERSON_FIELDS} } }
+          pageInfo { hasNextPage endCursor }
+        }
+      }
+    `,
+    { companyId },
+  );
+}
+
+export async function listPeopleByIds(ids) {
+  if (!ids.length) return { success: true, data: [] };
+  return paginate(
+    'people',
+    () => /* GraphQL */ `
+      query ListPeopleByIds($ids: [UUID!]!, $after: String) {
+        people(first: 100, after: $after, filter: { id: { in: $ids } }) {
+          edges { node { ${PERSON_FIELDS} } }
+          pageInfo { hasNextPage endCursor }
+        }
+      }
+    `,
+    { ids },
+  );
+}
+
+export async function listPeopleOnMessageList(listId) {
+  const result = await paginate(
+    'messageListMembers',
+    () => /* GraphQL */ `
+      query ListMembers($listId: UUID!, $after: String) {
+        messageListMembers(first: 100, after: $after, filter: { listId: { eq: $listId } }) {
+          edges { node { person { ${PERSON_FIELDS} } } }
+          pageInfo { hasNextPage endCursor }
+        }
+      }
+    `,
+    { listId },
+  );
+  if (!result.success) return result;
+  return {
+    success: true,
+    data: result.data.map((row) => row.person).filter(Boolean),
+  };
+}
+
+export async function listSuppressedEmails() {
+  const objectName = config.twenty.suppressionObject;
+  if (!objectName) return { success: true, data: [] };
+
+  const plural = `${objectName}s`;
+  return paginate(plural, () => /* GraphQL */ `
+    query ListSuppressions($after: String) {
+      ${plural}(first: 100, after: $after) {
+        edges { node { email } }
+        pageInfo { hasNextPage endCursor }
+      }
+    }
+  `);
+}
+
 export async function findPersonByEmail(email) {
   const query = /* GraphQL */ `
     query FindPersonByEmail($emailFilter: String) {

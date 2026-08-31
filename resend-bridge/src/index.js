@@ -7,6 +7,8 @@ import { Webhook } from 'svix';
 import { config, validateConfig } from './config.js';
 import { sendEmail, addSuppression } from './resend-client.js';
 import { syncEventToTwenty } from './twenty-client.js';
+import { getBlastJob, previewBlast, startBlast } from './blast.js';
+import { tryAcquireSendSlot } from './rate-limit.js';
 import { templateRouter } from './template-routes.js';
 import { loadTemplateHtml } from './template-store.js';
 
@@ -22,19 +24,7 @@ app.use(express.json({
 }));
 app.use(express.urlencoded({ extended: true }));
 
-// ─── In-memory rate limiter ─────────────────────────────
-const sendTimestamps = [];
-function rateLimited() {
-  const limit = config.bridge.rateLimitPerMinute;
-  if (limit <= 0) return false;
-  const now = Date.now();
-  while (sendTimestamps.length && sendTimestamps[0] < now - 60_000) {
-    sendTimestamps.shift();
-  }
-  if (sendTimestamps.length >= limit) return true;
-  sendTimestamps.push(now);
-  return false;
-}
+
 
 // ─── Auth middleware ────────────────────────────────────
 function requireBridgeAuth(req, res, next) {
@@ -142,7 +132,7 @@ app.post('/api/send', requireBridgeAuth, async (req, res) => {
     return res.status(400).json({ success: false, error: 'html or templateId is required' });
   }
 
-  if (rateLimited()) {
+  if (!tryAcquireSendSlot()) {
     return res.status(429).json({ success: false, error: 'Rate limit exceeded — try again shortly' });
   }
 
@@ -270,6 +260,54 @@ app.post('/unsubscribe', async (req, res) => {
       <p>You will no longer receive emails from us at <strong>${escapeHtml(email)}</strong>.</p>
       <p>This change may take a few minutes to take effect.</p>
     </div>`));
+});
+
+// ═══════════════════════════════════════════════════════
+//  ONE-TIME BLAST
+// ═══════════════════════════════════════════════════════
+app.post('/api/blast/preview', requireBridgeAuth, async (req, res) => {
+  const { source, messageListId, companyId, personIds } = req.body || {};
+  const result = await previewBlast({ source, messageListId, companyId, personIds });
+  if (!result.success) return res.status(400).json(result);
+  res.json(result);
+});
+
+app.post('/api/blast', requireBridgeAuth, (req, res) => {
+  const {
+    html,
+    subject,
+    campaignId,
+    source,
+    emails,
+    templateId,
+    messageListId,
+    companyId,
+    personIds,
+  } = req.body || {};
+  let bodyHtml = html;
+  if (!bodyHtml && templateId) {
+    bodyHtml = loadTemplateHtml(templateId);
+    if (!bodyHtml) {
+      return res.status(404).json({ success: false, error: `Template not found: ${templateId}` });
+    }
+  }
+  const result = startBlast({
+    html: bodyHtml,
+    subject,
+    campaignId,
+    source,
+    messageListId,
+    companyId,
+    personIds,
+  });
+  if (!result.success) return res.status(400).json(result);
+  res.json(result);
+});
+
+app.get('/api/blast/:id', requireBridgeAuth, (req, res) => {
+  const job = getBlastJob(req.params.id);
+  if (!job) return res.status(404).json({ success: false, error: 'Blast not found' });
+  res.json({ success: true, job });
 });
 
 // ═══════════════════════════════════════════════════════
