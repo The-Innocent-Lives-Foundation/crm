@@ -18,10 +18,6 @@ import { NoPermissionGuard } from 'src/engine/guards/no-permission.guard';
 import { PublicEndpointGuard } from 'src/engine/guards/public-endpoint.guard';
 
 import { FUNRAISE_WEBHOOK_PATH, FUNRAISE_WEBHOOK_SIGNING_SECRET_HEADER } from 'src/modules/funraise/constants/funraise.constants';
-import {
-  FunraiseException,
-  FunraiseExceptionCode,
-} from 'src/modules/funraise/exceptions/funraise.exception';
 import { FunraiseWebhookService } from 'src/modules/funraise/services/funraise-webhook.service';
 import { FunraiseWebhookApiExceptionFilter } from 'src/modules/funraise/filters/funraise-webhook-api-exception.filter';
 
@@ -41,19 +37,16 @@ export class FunraiseWebhookController {
     @Headers(FUNRAISE_WEBHOOK_SIGNING_SECRET_HEADER)
     hookSecret?: string,
   ): Promise<void> {
+    // Funraise subscription handshake: echo the secret back.
     if (isDefined(hookSecret)) {
-      // Funraise subscription handshake: echo the secret back.
       response.setHeader(FUNRAISE_WEBHOOK_SIGNING_SECRET_HEADER, hookSecret);
+    }
+
+    // Pure handshake (no body) or missing payload: acknowledge and stop.
+    if (!isDefined(request.rawBody)) {
       response.status(200).send();
 
       return;
-    }
-
-    if (!isDefined(request.rawBody)) {
-      throw new FunraiseException(
-        'Missing Funraise webhook body',
-        FunraiseExceptionCode.MISSING_REQUEST_BODY,
-      );
     }
 
     await this.funraiseWebhookService.handlePayload(request.rawBody);

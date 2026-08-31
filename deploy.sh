@@ -53,6 +53,9 @@ echo "=== Build twenty-ui (used by frontend) ==="
 yarn workspace twenty-ui build 2>&1 | tail -3
 
 echo "=== Build twenty-server ==="
+# The server container mounts ./packages/twenty-server/dist and can leave
+# root-owned files there (e.g. dist/front). Clear them so `rimraf dist` can run.
+sudo rm -rf packages/twenty-server/dist 2>/dev/null || true
 yarn nx build twenty-server 2>&1 | tail -5
 
 echo "=== Build twenty-front ==="
