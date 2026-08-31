@@ -21,6 +21,11 @@ export type FunraiseCreateOpportunityInput = {
   companyId: string | null;
 };
 
+export type FunraiseFindOrCreateOpportunityResult = {
+  opportunity: OpportunityWorkspaceEntity;
+  isNew: boolean;
+};
+
 @Injectable()
 export class FunraiseOpportunityService {
   constructor(
@@ -30,7 +35,7 @@ export class FunraiseOpportunityService {
   async findOrCreateOpportunity(
     input: FunraiseCreateOpportunityInput,
     workspaceId: string,
-  ): Promise<OpportunityWorkspaceEntity> {
+  ): Promise<FunraiseFindOrCreateOpportunityResult> {
     const authContext = buildSystemAuthContext(workspaceId);
 
     return this.globalWorkspaceOrmManager.executeInWorkspaceContext(
@@ -49,7 +54,7 @@ export class FunraiseOpportunityService {
         });
 
         if (isDefined(existingOpportunity)) {
-          return existingOpportunity;
+          return { opportunity: existingOpportunity, isNew: false };
         }
 
         const inserted = await opportunityRepository.insert({
@@ -76,7 +81,7 @@ export class FunraiseOpportunityService {
           throw new Error('Failed to load created Funraise opportunity');
         }
 
-        return createdOpportunity;
+        return { opportunity: createdOpportunity, isNew: true };
       },
       authContext,
     );

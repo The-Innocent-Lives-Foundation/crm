@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 
 import { isNonEmptyString } from '@sniptt/guards';
 
+import { TwentyConfigService } from 'src/engine/core-modules/twenty-config/twenty-config.service';
 import { FunraiseCompanyService } from 'src/modules/funraise/services/funraise-company.service';
 import { FunraiseNoteService } from 'src/modules/funraise/services/funraise-note.service';
 import { FunraiseOpportunityService } from 'src/modules/funraise/services/funraise-opportunity.service';
@@ -18,13 +19,20 @@ export class FunraiseTransactionService {
     private readonly funraiseCompanyService: FunraiseCompanyService,
     private readonly funraiseOpportunityService: FunraiseOpportunityService,
     private readonly funraiseNoteService: FunraiseNoteService,
+    private readonly twentyConfigService: TwentyConfigService,
   ) {}
 
   async processTransaction(
     data: FunraiseTransactionData,
     workspaceId: string,
   ): Promise<void> {
-    const mapped = mapFunraiseTransaction(data);
+    const stageWon =
+      this.twentyConfigService.get('FUNRAISE_OPPORTUNITY_STAGE_WON') ??
+      'CUSTOMER';
+    const stageOpen =
+      this.twentyConfigService.get('FUNRAISE_OPPORTUNITY_STAGE_OPEN') ?? 'NEW';
+
+    const mapped = mapFunraiseTransaction(data, stageWon, stageOpen);
 
     const person = await this.funraisePersonService.findOrCreatePerson(
       mapped.person,
@@ -42,7 +50,7 @@ export class FunraiseTransactionService {
       companyId = company.id;
     }
 
-    const opportunity =
+    const { opportunity, isNew } =
       await this.funraiseOpportunityService.findOrCreateOpportunity(
         {
           name: mapped.opportunityName,
@@ -56,7 +64,7 @@ export class FunraiseTransactionService {
         workspaceId,
       );
 
-    if (isNonEmptyString(mapped.noteBody)) {
+    if (isNew && isNonEmptyString(mapped.noteBody)) {
       await this.funraiseNoteService.createNoteOnOpportunity(
         mapped.noteBody,
         opportunity.id,

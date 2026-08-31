@@ -31,6 +31,8 @@ jobs:
           FUNRAISE_API_KEY: ${{ secrets.FUNRAISE_API_KEY }}
           FUNRAISE_WEBHOOK_SIGNING_SECRET: ${{ secrets.FUNRAISE_WEBHOOK_SIGNING_SECRET }}
           FUNRAISE_API_BASE_URL: ${{ secrets.FUNRAISE_API_BASE_URL }}
+          FUNRAISE_OPPORTUNITY_STAGE_WON: ${{ secrets.FUNRAISE_OPPORTUNITY_STAGE_WON }}
+          FUNRAISE_OPPORTUNITY_STAGE_OPEN: ${{ secrets.FUNRAISE_OPPORTUNITY_STAGE_OPEN }}
         run: |
           chmod +x deploy.sh
           ./deploy.sh

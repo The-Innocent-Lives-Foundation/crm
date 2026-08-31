@@ -84,6 +84,8 @@ inject_funraise_env FUNRAISE_API_KEY
 inject_funraise_env FUNRAISE_WEBHOOK_SIGNING_SECRET
 inject_funraise_env FUNRAISE_API_BASE_URL
 inject_funraise_env FUNRAISE_BACKFILL_ENABLED
+inject_funraise_env FUNRAISE_OPPORTUNITY_STAGE_WON
+inject_funraise_env FUNRAISE_OPPORTUNITY_STAGE_OPEN
 
 if [ -f /home/stephen/resend-bridge/.env ] && [ ! -f resend-bridge/.env ]; then
   echo "Reusing resend-bridge/.env"

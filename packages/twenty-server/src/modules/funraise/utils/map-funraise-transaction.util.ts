@@ -78,8 +78,11 @@ const buildOpportunityAmount = (
   };
 };
 
-const buildOpportunityStage = (data: FunraiseTransactionData): string =>
-  data.transaction.status === 'Complete' ? 'CUSTOMER' : 'NEW';
+const buildOpportunityStage = (
+  data: FunraiseTransactionData,
+  stageWon: string,
+  stageOpen: string,
+): string => (data.transaction.status === 'Complete' ? stageWon : stageOpen);
 
 const buildNoteBody = (data: FunraiseTransactionData): string | null => {
   const lines: string[] = [];
@@ -129,6 +132,8 @@ const buildNoteBody = (data: FunraiseTransactionData): string | null => {
 
 export const mapFunraiseTransaction = (
   data: FunraiseTransactionData,
+  opportunityStageWon: string,
+  opportunityStageOpen: string,
 ): FunraiseMappedTransaction => ({
   person: {
     name: buildPersonName(data),
@@ -140,6 +145,10 @@ export const mapFunraiseTransaction = (
   opportunityName: buildOpportunityName(data),
   opportunityAmount: buildOpportunityAmount(data),
   opportunityCloseDate: new Date(data.donationDate),
-  opportunityStage: buildOpportunityStage(data),
+  opportunityStage: buildOpportunityStage(
+    data,
+    opportunityStageWon,
+    opportunityStageOpen,
+  ),
   noteBody: buildNoteBody(data),
 });

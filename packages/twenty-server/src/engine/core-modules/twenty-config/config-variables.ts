@@ -2170,6 +2170,26 @@ export class ConfigVariables {
   })
   @IsOptional()
   FUNRAISE_BACKFILL_ENABLED = false;
+
+  @ConfigVariablesMetadata({
+    group: ConfigVariablesGroup.ADVANCED_SETTINGS,
+    description:
+      'Opportunity stage to use for completed (won) Funraise donations',
+    type: ConfigVariableType.STRING,
+  })
+  @IsString()
+  @IsOptional()
+  FUNRAISE_OPPORTUNITY_STAGE_WON = 'CUSTOMER';
+
+  @ConfigVariablesMetadata({
+    group: ConfigVariablesGroup.ADVANCED_SETTINGS,
+    description:
+      'Opportunity stage to use for open (non-completed) Funraise donations',
+    type: ConfigVariableType.STRING,
+  })
+  @IsString()
+  @IsOptional()
+  FUNRAISE_OPPORTUNITY_STAGE_OPEN = 'NEW';
 }
 
 export const validate = (config: Record<string, unknown>): ConfigVariables => {
