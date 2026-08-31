@@ -8,6 +8,7 @@ import { FunraiseWebhookController } from 'src/modules/funraise/funraise-webhook
 import { FunraiseBackfillCronJob } from 'src/modules/funraise/jobs/funraise-backfill.cron.job';
 import { FunraiseBackfillService } from 'src/modules/funraise/services/funraise-backfill.service';
 import { FunraiseCompanyService } from 'src/modules/funraise/services/funraise-company.service';
+import { FunraiseEventStoreService } from 'src/modules/funraise/services/funraise-event-store.service';
 import { FunraiseNoteService } from 'src/modules/funraise/services/funraise-note.service';
 import { FunraiseOpportunityService } from 'src/modules/funraise/services/funraise-opportunity.service';
 import { FunraisePersonService } from 'src/modules/funraise/services/funraise-person.service';
@@ -21,6 +22,7 @@ import { FunraiseWebhookService } from 'src/modules/funraise/services/funraise-w
   providers: [
     FunraiseWebhookApiExceptionFilter,
     FunraiseWebhookService,
+    FunraiseEventStoreService,
     FunraisePersonService,
     FunraiseCompanyService,
     FunraiseOpportunityService,

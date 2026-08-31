@@ -11,6 +11,7 @@ import {
   FunraiseException,
   FunraiseExceptionCode,
 } from 'src/modules/funraise/exceptions/funraise.exception';
+import { FunraiseEventStoreService } from 'src/modules/funraise/services/funraise-event-store.service';
 import { FunraiseTransactionService } from 'src/modules/funraise/services/funraise-transaction.service';
 import { type FunraiseWebhookPayload } from 'src/modules/funraise/types/funraise-webhook-payload.type';
 
@@ -21,6 +22,7 @@ export class FunraiseWebhookService {
   constructor(
     private readonly twentyConfigService: TwentyConfigService,
     private readonly funraiseTransactionService: FunraiseTransactionService,
+    private readonly funraiseEventStoreService: FunraiseEventStoreService,
   ) {}
 
   async handlePayload(rawBody: Buffer): Promise<void> {
@@ -42,6 +44,11 @@ export class FunraiseWebhookService {
     }
 
     const workspaceId = this.getWorkspaceId();
+
+    this.funraiseEventStoreService.storeEvent(
+      payload.data,
+      payload.event,
+    );
 
     await this.funraiseTransactionService.processTransaction(
       payload.data,
