@@ -15,7 +15,7 @@ import {
 
 import { type Response } from 'express';
 
-import { isDefined, parseJson } from 'twenty-shared/utils';
+import { isDefined } from 'twenty-shared/utils';
 
 import { NoPermissionGuard } from 'src/engine/guards/no-permission.guard';
 import { PublicEndpointGuard } from 'src/engine/guards/public-endpoint.guard';
@@ -29,8 +29,14 @@ import { FunraiseWebhookApiExceptionFilter } from 'src/modules/funraise/filters/
 import { TwentyConfigService } from 'src/engine/core-modules/twenty-config/twenty-config.service';
 
 import { type FunraiseTransactionData } from 'src/modules/funraise/types/funraise-webhook-payload.type';
+import {
+  csvRowsToObjects,
+  mapCsvRowToTransaction,
+  parseCsv,
+} from 'src/modules/funraise/utils/parse-funraise-csv.util';
 
 const FUNRAISE_REPLAY_PATH = 'webhooks/funraise/replay';
+const FUNRAISE_IMPORT_PATH = 'webhooks/funraise/import';
 const FUNRAISE_CSV_IMPORT_PATH = 'webhooks/funraise/csv-import';
 
 @Controller()
@@ -159,6 +165,55 @@ export class FunraiseWebhookController {
     }
 
     response.status(200).json({ success, failed, total: transactions.length });
+  }
+
+  // Import raw CSV (text/csv or text/plain) exported from Funraise reports.
+  // Headers are mapped case-insensitively to the transaction shape.
+  @Post([FUNRAISE_IMPORT_PATH])
+  @UseGuards(PublicEndpointGuard, NoPermissionGuard)
+  @HttpCode(200)
+  async importCsv(
+    @Req() request: RawBodyRequest<Request>,
+    @Res() response: Response,
+  ): Promise<void> {
+    if (!isDefined(request.rawBody)) {
+      throw new FunraiseException(
+        'Missing CSV payload',
+        FunraiseExceptionCode.MISSING_REQUEST_BODY,
+      );
+    }
+
+    const rows = parseCsv(request.rawBody.toString('utf8'));
+
+    if (rows.length === 0) {
+      throw new FunraiseException(
+        'Empty CSV payload',
+        FunraiseExceptionCode.INVALID_WEBHOOK_PAYLOAD,
+      );
+    }
+
+    const objects = csvRowsToObjects(rows);
+    const transactions = objects.map(mapCsvRowToTransaction) as unknown as FunraiseTransactionData[];
+
+    const workspaceId = this.getWorkspaceId();
+    let success = 0;
+    let failed = 0;
+
+    for (const transaction of transactions) {
+      try {
+        await this.funraiseTransactionService.processTransaction(
+          transaction,
+          workspaceId,
+        );
+        success++;
+      } catch (err) {
+        failed++;
+      }
+    }
+
+    response
+      .status(200)
+      .json({ success, failed, total: transactions.length });
   }
 
   @Get([FUNRAISE_REPLAY_PATH])

@@ -33,6 +33,7 @@ jobs:
           FUNRAISE_API_BASE_URL: ${{ secrets.FUNRAISE_API_BASE_URL }}
           FUNRAISE_OPPORTUNITY_STAGE_WON: ${{ secrets.FUNRAISE_OPPORTUNITY_STAGE_WON }}
           FUNRAISE_OPPORTUNITY_STAGE_OPEN: ${{ secrets.FUNRAISE_OPPORTUNITY_STAGE_OPEN }}
+          FUNRAISE_BACKFILL_ENABLED: ${{ secrets.FUNRAISE_BACKFILL_ENABLED }}
         run: |
           chmod +x deploy.sh
           ./deploy.sh
