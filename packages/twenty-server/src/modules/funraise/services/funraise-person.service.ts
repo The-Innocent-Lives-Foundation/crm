@@ -54,11 +54,46 @@ export class FunraisePersonService {
 
             return existingPerson;
           }
+        } else {
+          // No email: dedup by name to avoid creating duplicates.
+          const firstName = person.name.firstName;
+          const lastName = person.name.lastName;
+
+          if (isNonEmptyString(firstName) || isNonEmptyString(lastName)) {
+            const existingPerson = await personRepository
+              .createQueryBuilder('person')
+              .where('LOWER(person.nameFirstName) = LOWER(:firstName)', {
+                firstName: firstName ?? '',
+              })
+              .andWhere('LOWER(person.nameLastName) = LOWER(:lastName)', {
+                lastName: lastName ?? '',
+              })
+              .orderBy('person.createdAt', 'ASC')
+              .withDeleted()
+              .getOne();
+
+            if (isDefined(existingPerson)) {
+              if (isDefined(existingPerson.deletedAt)) {
+                await personRepository.update(existingPerson.id, {
+                  deletedAt: null,
+                });
+              }
+
+              return existingPerson;
+            }
+          }
         }
 
         const inserted = await personRepository.insert({
           name: person.name,
-          emails: person.emails,
+          // Empty email -> null so the unique index on emailsPrimaryEmail
+          // does not collide across multiple no-email donors.
+          emails: {
+            ...person.emails,
+            primaryEmail: isNonEmptyString(email)
+              ? email
+              : (null as unknown as string),
+          },
           position: 0,
         });
 
