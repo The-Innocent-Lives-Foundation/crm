@@ -39,6 +39,7 @@ export class FunraiseTransactionService {
       workspaceId,
     );
 
+    // Determine company: institution (Foundation/Corp) takes precedence over companyMatch
     let companyId: string | null = null;
 
     if (isNonEmptyString(mapped.companyName)) {
@@ -58,6 +59,7 @@ export class FunraiseTransactionService {
           amount: mapped.opportunityAmount,
           closeDate: mapped.opportunityCloseDate,
           stage: mapped.opportunityStage,
+          donationType: mapped.donationType,
           pointOfContactId: person.id,
           companyId,
         },

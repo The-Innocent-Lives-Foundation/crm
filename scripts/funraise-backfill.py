@@ -108,12 +108,18 @@ def split_name(full_name):
     return first, last
 
 
-def map_transaction(tx):
+def map_transaction(tx, supporter=None):
     """Map platform transaction to FunraiseTransactionData (webhook) shape."""
     donor_id = tx.get("donorId") or 0
     full_name = tx.get("donorFullName") or ""
     email = tx.get("donorEmail") or None
     first, last = split_name(full_name)
+
+    sup_data = supporter or {}
+    institution = sup_data.get("institution") or {}
+    institution_category = institution.get("category", "Individual")
+    institution_name = institution.get("name")
+    tags = sup_data.get("tags", "")
 
     recurring = tx.get("recurring") or False
     sequence = tx.get("recurringSequence")
@@ -129,6 +135,7 @@ def map_transaction(tx):
         "offline": bool(tx.get("offline")),
         "donationDate": tx.get("donationDate"),
         "comment": None,
+        "tags": tags,
         "transaction": {
             "amount": tx.get("amount"),
             "currency": "USD",
@@ -192,6 +199,25 @@ def import_to_twenty(transactions, twenty_url):
         raise RuntimeError(f"Twenty import error {e.code}: {body[:300]}")
 
 
+def get_supporter_cached(auth_token, donor_id, cache):
+    if donor_id in cache:
+        return cache[donor_id]
+    try:
+        req = urllib.request.Request(
+            f"https://platform.funraise.io/api/v1/crm/supporter/{donor_id}",
+            headers={"Cookie": f"authToken={auth_token}"},
+        )
+        resp = urllib.request.urlopen(req, timeout=10)
+        sup = json.loads(resp.read().decode())
+        cache[donor_id] = sup
+        if len(cache) % 500 == 0:
+            print(f"  cached {len(cache)} supporters...")
+        return sup
+    except Exception:
+        cache[donor_id] = {}
+        return {}
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--batch", type=int, default=200)
@@ -218,6 +244,7 @@ def main():
     total_seen = 0
     total_available = None
     pending_batch = []
+    supporter_cache = {}
 
     while True:
         resp = api_request(
@@ -230,7 +257,12 @@ def main():
         if not results:
             break
 
-        mapped = [map_transaction(tx) for tx in results]
+        mapped = []
+        for tx in results:
+            donor_id = tx.get("donorId")
+            sup = get_supporter_cached(auth_token, donor_id, supporter_cache) if donor_id else None
+            mapped.append(map_transaction(tx, sup))
+
         total_seen += len(results)
         pending_batch.extend(mapped)
 

@@ -22,10 +22,18 @@ export type FunraiseMappedTransaction = {
   opportunityAmount: CurrencyMetadata;
   opportunityCloseDate: Date;
   opportunityStage: string;
+  donationType: string | null;
   noteBody: string | null;
 };
 
 const AMOUNT_MICROS_PER_UNIT = 1_000_000;
+
+const INSTITUTION_INDIVIDUAL = 'Individual';
+
+const DONATION_TYPE_CONSUMER = 'CONSUMER';
+const DONATION_TYPE_CORPORATE = 'CORPORATE_SPONSOR';
+const DONATION_TYPE_GRANT = 'GRANT';
+const DONATION_TYPE_AMBASSADOR = 'AMBASSADOR';
 
 const buildPersonName = (
   data: FunraiseTransactionData,
@@ -84,6 +92,64 @@ const buildOpportunityStage = (
   stageOpen: string,
 ): string => (data.transaction.status === 'Complete' ? stageWon : stageOpen);
 
+const buildDonationType = (
+  data: FunraiseTransactionData,
+): string | null => {
+  const institutionCategory =
+    data.supporter.institutionCategory ?? INSTITUTION_INDIVIDUAL;
+  const tags = (data.tags ?? '').toLowerCase();
+
+  // Tags take precedence: Ambassador tag → AMBASSADOR
+  if (tags.includes('ambassador')) {
+    return DONATION_TYPE_AMBASSADOR;
+  }
+
+  // Matching gift tag → GRANT
+  if (tags.includes('matching')) {
+    return DONATION_TYPE_GRANT;
+  }
+
+  // Institution-based mapping
+  const category = institutionCategory.toLowerCase();
+
+  if (category.includes('corporat') || category.includes('company')) {
+    return DONATION_TYPE_CORPORATE;
+  }
+
+  if (
+    category.includes('foundation') ||
+    category.includes('grant') ||
+    category.includes('trust')
+  ) {
+    return DONATION_TYPE_GRANT;
+  }
+
+  return DONATION_TYPE_CONSUMER;
+};
+
+const buildCompanyName = (
+  data: FunraiseTransactionData,
+): string | null => {
+  // companyMatch (employer matching) takes precedence
+  if (isNonEmptyString(data.companyMatch?.companyName)) {
+    return data.companyMatch!.companyName!.trim();
+  }
+
+  // Institution (when supporter is a non-individual entity)
+  const category = data.supporter.institutionCategory;
+  const institutionName = data.supporter.institutionName;
+
+  if (
+    isNonEmptyString(category) &&
+    category !== INSTITUTION_INDIVIDUAL &&
+    isNonEmptyString(institutionName)
+  ) {
+    return institutionName!.trim();
+  }
+
+  return null;
+};
+
 const buildNoteBody = (data: FunraiseTransactionData): string | null => {
   const lines: string[] = [];
 
@@ -139,9 +205,7 @@ export const mapFunraiseTransaction = (
     name: buildPersonName(data),
     emails: buildPersonEmails(data),
   },
-  companyName: isNonEmptyString(data.companyMatch?.companyName)
-    ? data.companyMatch?.companyName?.trim() ?? null
-    : null,
+  companyName: buildCompanyName(data),
   opportunityName: buildOpportunityName(data),
   opportunityAmount: buildOpportunityAmount(data),
   opportunityCloseDate: new Date(data.donationDate),
@@ -150,5 +214,6 @@ export const mapFunraiseTransaction = (
     opportunityStageWon,
     opportunityStageOpen,
   ),
+  donationType: buildDonationType(data),
   noteBody: buildNoteBody(data),
 });

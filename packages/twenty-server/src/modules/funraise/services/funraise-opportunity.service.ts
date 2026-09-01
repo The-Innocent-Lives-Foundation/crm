@@ -17,6 +17,7 @@ export type FunraiseCreateOpportunityInput = {
   amount: CurrencyMetadata;
   closeDate: Date;
   stage: string;
+  donationType: string | null;
   pointOfContactId: string;
   companyId: string | null;
 };
@@ -54,10 +55,34 @@ export class FunraiseOpportunityService {
         });
 
         if (isDefined(existingOpportunity)) {
+          const updates: Record<string, unknown> = {};
+
+          if (isDefined(input.donationType)) {
+            const existingType = (existingOpportunity as Record<string, unknown>).donationType;
+
+            if (existingType !== input.donationType) {
+              updates.donationType = input.donationType;
+            }
+          }
+
+          if (
+            isDefined(input.companyId) &&
+            !isDefined(existingOpportunity.companyId)
+          ) {
+            updates.companyId = input.companyId;
+          }
+
+          if (Object.keys(updates).length > 0) {
+            await opportunityRepository.update(
+              existingOpportunity.id,
+              updates as unknown as Record<string, unknown>,
+            );
+          }
+
           return { opportunity: existingOpportunity, isNew: false };
         }
 
-        const inserted = await opportunityRepository.insert({
+        const insertRecord: Record<string, unknown> = {
           name: input.name,
           amount: input.amount,
           closeDate: input.closeDate,
@@ -65,7 +90,17 @@ export class FunraiseOpportunityService {
           pointOfContactId: input.pointOfContactId,
           companyId: input.companyId,
           position: 0,
-        });
+        };
+
+        if (isDefined(input.donationType)) {
+          insertRecord.donationType = input.donationType;
+        }
+
+        const inserted = await opportunityRepository.insert(
+          insertRecord as unknown as Parameters<
+            typeof opportunityRepository.insert
+          >[0],
+        );
 
         const opportunityId = inserted.identifiers[0]?.id;
 
